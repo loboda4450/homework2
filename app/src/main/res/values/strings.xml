@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">hw2</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="last_known_loc_msg">last known location</string>
+    <string name="clear_data">CLEAR DATA</string>
+    <string name="default_text">Default text</string>
+</resources>
