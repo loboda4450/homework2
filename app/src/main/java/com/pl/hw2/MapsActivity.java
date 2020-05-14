@@ -271,7 +271,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             writer.write(to_save);
             writer.close();
             Log.v("hw2", "File saved");
-            Log.v("hw2", to_save);
 
         }catch (FileNotFoundException e){
             e.printStackTrace();
