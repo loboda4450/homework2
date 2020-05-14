@@ -12,9 +12,12 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.storage.StorageManager;
+import android.provider.Telephony;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ListAdapter;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -37,9 +40,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import org.json.JSONArray;
-
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -64,7 +64,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean updatable = false;
     Marker gpsMarker = null;
     List<Marker> markerList;
-    List<MarkerOptions> markerOptionsList;
+    List<LatLng> latLngList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,7 +82,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         markerList = new ArrayList<>();
-        markerOptionsList = new ArrayList<>();
+        latLngList = new ArrayList<>();
 
         start.setVisibility(View.INVISIBLE);
         stop.setVisibility(View.INVISIBLE);
@@ -96,7 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     i.remove();
                 }
                 markerList.clear();
-                markerOptionsList.clear();
+                latLngList.clear();
                 mMap.moveCamera(CameraUpdateFactory.zoomTo(0f));
 
                 if(start != null && stop != null && meter != null){
@@ -121,6 +121,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 start.setVisibility(View.INVISIBLE);
                 stop.setVisibility(View.INVISIBLE);
                 meter.setVisibility(View.INVISIBLE);
+                mMap.moveCamera(CameraUpdateFactory.zoomTo(0f));
             }
         });
 
@@ -141,7 +142,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onDestroy() {
-        saveData(markerOptionsList);
+        saveData(latLngList);
         super.onDestroy();
     }
 
@@ -152,6 +153,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapLoadedCallback(this);
         mMap.setOnMarkerClickListener(this);
         mMap.setOnMapLongClickListener(this);
+
+        restoreData();
+        Log.v("hw2", "Data restored");
     }
 
     @Override
@@ -223,14 +227,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapLongClick(LatLng latLng) {
+        LatLng pos = new LatLng(latLng.latitude, latLng.longitude);
         MarkerOptions m = new MarkerOptions()
-                .position(new LatLng(latLng.latitude, latLng.longitude))
+                .position(pos)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
                 .alpha(0.8f)
                 .title(String.format("Position: (%.2f, %.2f)", latLng.latitude, latLng.longitude));
         Marker marker = mMap.addMarker(m);
         markerList.add(marker);
-        markerOptionsList.add(m);
+        latLngList.add(pos);
     }
 
     @Override
@@ -255,7 +260,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.zoomOut());
     }
 
-    private void saveData(List<MarkerOptions> markers){
+    private void saveData(List<LatLng> markers){
         Gson gson = new Gson();
         String to_save = gson.toJson(markers);
         FileOutputStream fileOutputStream;
@@ -265,8 +270,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             FileWriter writer = new FileWriter(fileOutputStream.getFD());
             writer.write(to_save);
             writer.close();
+            Log.v("hw2", "File saved");
+            Log.v("hw2", to_save);
+
         }catch (FileNotFoundException e){
             e.printStackTrace();
+            Log.v("hw2", "File not saved");
         }
         catch (IOException e){
             e.printStackTrace();
@@ -280,34 +289,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         FileInputStream fileInputStream;
         Gson gson = new Gson();
         int DEFAULT_BUFFER_SIZE = 10000;
-        String json;
+        String json;;
 
         try{
             fileInputStream = openFileInput("markers.json");
             FileReader reader = new FileReader((fileInputStream.getFD()));
             char[] buf = new char[DEFAULT_BUFFER_SIZE];
             int n;
+
             StringBuilder builder = new StringBuilder();
             while ((n = reader.read(buf)) >= 0){
                 String tmp = String.valueOf(buf);
                 String substring = (n<DEFAULT_BUFFER_SIZE) ? tmp.substring(0, n) : tmp;
                 builder.append(substring);
             }
+
             reader.close();
             json = builder.toString();
-            Type collectionType = new TypeToken<List<Marker>>(){}.getType();
-            List<Marker> o = gson.fromJson(json, collectionType);
+            Type collectionType = new TypeToken<List<LatLng>>(){}.getType();
+            List<LatLng> o = gson.fromJson(json, collectionType);
+
             if(o != null){
                 markerList.clear();
-                markerList.addAll(o);
-                for(MarkerOptions m: markerOptionsList){
-                    mMap.addMarker(m);
+                latLngList.clear();
+
+                for(LatLng m: o) {
+                    Log.v("hw2", m.latitude + ", " + m.longitude);
+                    LatLng latLng = new LatLng(m.latitude, m.longitude);
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(latLng)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))
+                            .alpha(0.8f)
+                            .title("Restored from memory");
+
+                    try {
+                        markerList.add(mMap.addMarker(markerOptions));
+                    } catch (Exception e){
+                        Log.e("hw2", e.getMessage());
+                    }
                 }
+
+            } else {
+                Log.e("hw2", "File is empty");
             }
-        }catch (FileNotFoundException e){
-            e.printStackTrace();
-        }catch (IOException e){
-            e.printStackTrace();
+        } catch (IOException e){
+            Log.e("hw2", e.getMessage());
         }
     }
 }
