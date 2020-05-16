@@ -4,6 +4,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
+import android.animation.Animator;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -16,6 +17,8 @@ import android.os.storage.StorageManager;
 import android.provider.Telephony;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.TranslateAnimation;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ListAdapter;
 import android.widget.TextView;
@@ -66,6 +69,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<Marker> markerList;
     List<LatLng> latLngList;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,9 +104,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.moveCamera(CameraUpdateFactory.zoomTo(0f));
 
                 if(start != null && stop != null && meter != null){
-                    start.setVisibility(View.INVISIBLE);
-                    stop.setVisibility(View.INVISIBLE);
-                    meter.setVisibility(View.INVISIBLE);
+                    updatable = false;
+                    hide(stop);
+                    hide(start);
+                    hide(meter);
                 }
             }
         });
@@ -118,9 +123,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
                 updatable = false;
-                start.setVisibility(View.INVISIBLE);
-                stop.setVisibility(View.INVISIBLE);
-                meter.setVisibility(View.INVISIBLE);
+                hide(stop);
+                hide(start);
+                hide(meter);
                 mMap.moveCamera(CameraUpdateFactory.zoomTo(0f));
             }
         });
@@ -244,9 +249,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(cameraPosition.zoom < 14f) mMap.moveCamera(CameraUpdateFactory.zoomTo(14f));
 
         if(start != null && stop != null && meter != null){
-            start.setVisibility(View.VISIBLE);
-            stop.setVisibility(View.VISIBLE);
-            meter.setVisibility(View.VISIBLE);
+            show(stop);
+            show(start);
+            show(meter);
             meter.setText("Push start button to activate");
         }
         return false;
@@ -260,6 +265,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.zoomOut());
     }
 
+    protected void hide(final View v){
+        v.animate().translationY(0).alpha(0f).setDuration(1000).setListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                v.setVisibility(View.INVISIBLE);
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+    }
+
+    protected void show(final View v){
+        v.animate().translationY(0).alpha(1f).setDuration(1000).setListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                v.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+    }
+
     private void saveData(List<LatLng> markers){
         Gson gson = new Gson();
         String to_save = gson.toJson(markers);
@@ -270,16 +323,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             FileWriter writer = new FileWriter(fileOutputStream.getFD());
             writer.write(to_save);
             writer.close();
-            Log.v("hw2", "File saved");
 
-        }catch (FileNotFoundException e){
-            e.printStackTrace();
-            Log.v("hw2", "File not saved");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-        catch (Exception e){
+        } catch (FileNotFoundException e){
+            Log.e("hw2", "Error occurred: "+ e.getMessage());
+        } catch (Exception e){
             e.printStackTrace();
         }
     }
