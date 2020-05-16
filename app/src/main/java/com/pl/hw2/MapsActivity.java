@@ -365,6 +365,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     try {
                         markerList.add(mMap.addMarker(markerOptions));
+                        latLngList.add(latLng);
                     } catch (Exception e){
                         Log.e("hw2", e.getMessage());
                     }
